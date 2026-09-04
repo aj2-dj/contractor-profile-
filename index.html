@@ -137,7 +137,7 @@ button{background:#0759a5}
 
   <div class="admin-pane" data-admin-pane="reps">
     <div class="admin-toolbar">
-      <div><h3>Salesperson Directory</h3><p class="muted">Each rep gets a permanent-style <b>rep ID</b>. Editing a rep here does not change old links; generate/copy the updated link when details change.</p></div>
+      <div><h3>Salesperson Directory</h3><p class="muted">Each rep gets a short <b>permanent Rep ID link</b>. Update the rep here, then publish <code>config.js</code>; their existing link stays the same.</p></div>
       <button type="button" class="primary" id="adminNewRepBtn">+ Add Salesperson</button>
     </div>
     <div id="repEditorCard" class="admin-editor" hidden>
@@ -163,7 +163,7 @@ button{background:#0759a5}
 
   <div class="admin-pane" data-admin-pane="questions" hidden>
     <div class="admin-toolbar">
-      <div><h3>Question Manager</h3><p class="muted">Edit wording, turn questions on/off, and add custom questions. Changes are embedded into newly generated rep links.</p></div>
+      <div><h3>Question Manager</h3><p class="muted">Edit wording, answer choices, required status, on/off status, and custom questions. Publish <code>config.js</code> to update every existing rep link; no new rep links are required.</p></div>
       <button type="button" class="primary" id="adminAddQuestionBtn">+ Add Custom Question</button>
     </div>
     <div id="questionDirectory" class="question-directory"></div>
@@ -172,7 +172,7 @@ button{background:#0759a5}
 
   <div class="admin-pane" data-admin-pane="tools" hidden>
     <div class="admin-toolbar">
-      <div><h3>Backup / Share Manager Setup</h3><p class="muted">No backend means this browser stores your master data locally. Export a backup or create a shareable manager link containing the current setup.</p></div>
+      <div><h3>Backup / Share Manager Setup</h3><p class="muted">No backend means this browser stores your working master data locally. Export a backup, bookmark the master admin link, or download <code>config.js</code> to publish your latest setup to GitHub Pages.</p></div>
     </div>
     <div class="tools-grid">
       <button type="button" id="adminExportBtn">Export Master JSON</button>
@@ -207,455 +207,178 @@ button{background:#0759a5}
 <p>Thank you for taking the time to complete this. I’ll use the information to save you time, help you get what you need faster, and better support your company’s goals.</p></section>
 </main>
 
+<script src="config.js"></script>
 <script id="teamRepConfig">
-const TEAM_DEFAULT_REP = {
-  id:"anthony",
-  name:"Anthony Crumity",
-  title:"Inside Sales Associate",
-  company:"Johnstone Supply - JTeam Group",
-  address:"3650 Junction Blvd, Garner, NC 27606",
-  office:"(919) 661-5565 ext: 8569",
-  cell:"(919) 418-2183",
-  email:"anthony.crumity@jteamgroup.com",
-  photo:document.getElementById("repPhoto")?.getAttribute("src")||""
-};
-
-const params=new URLSearchParams(window.location.search);
-const b64ToJson=s=>{
-  try{
-    const pad="=".repeat((4-(s.length%4))%4);
-    const bytes=Uint8Array.from(atob((s+pad).replace(/-/g,"+").replace(/_/g,"/")),c=>c.charCodeAt(0));
-    return JSON.parse(new TextDecoder().decode(bytes));
-  }catch(e){return null}
-};
-const encodedProfile=params.get("profile");
-const linkedRep=encodedProfile?b64ToJson(encodedProfile):null;
-const ACTIVE_REP=(linkedRep&&linkedRep.name&&linkedRep.email)?{...TEAM_DEFAULT_REP,...linkedRep} : TEAM_DEFAULT_REP; if(window.ACTIVE_REP_OVERRIDE) Object.assign(ACTIVE_REP,window.ACTIVE_REP_OVERRIDE);
-
-function applyRepProfile(){
+(function(){
+  const fallbackRep={id:"anthony",name:"Anthony Crumity",title:"Inside Sales Associate",company:"Johnstone Supply - JTeam Group",address:"3650 Junction Blvd, Garner, NC 27606",office:"(919) 661-5565 ext: 8569",cell:"(919) 418-2183",email:"anthony.crumity@jteamgroup.com",photo:document.getElementById("repPhoto")?.getAttribute("src")||""};
+  const published=window.CONTRACTOR_MASTER_CONFIG||{};
+  const publishedReps=Array.isArray(published.reps)?published.reps:[];
+  const params=new URLSearchParams(window.location.search);
+  const b64ToJson=s=>{try{const pad="=".repeat((4-(s.length%4))%4);const bin=atob((s+pad).replace(/-/g,"+").replace(/_/g,"/"));const bytes=Uint8Array.from(bin,c=>c.charCodeAt(0));return JSON.parse(new TextDecoder().decode(bytes));}catch(e){return null;}};
+  const legacy=b64ToJson(params.get("profile")||"");
+  const repId=(params.get("rep")||"").toLowerCase();
+  let active=null;
+  if(repId){ active=publishedReps.find(r=>String(r.id||"").toLowerCase()===repId)||null; }
+  if(!active && legacy && legacy.name && legacy.email){ active={...fallbackRep,...legacy}; }
+  if(!active && !repId){ active=publishedReps.find(r=>String(r.id||"").toLowerCase()==="anthony")||fallbackRep; }
+  window.__ACTIVE_REP=active;
+  window.__REP_NOT_FOUND=!!repId && !active;
   const set=(id,value)=>{const el=document.getElementById(id);if(el)el.textContent=value||""};
-  set("repName",ACTIVE_REP.name);
-  set("repTitle",ACTIVE_REP.title);
-  set("repCompany",ACTIVE_REP.company);
-  set("repAddress",ACTIVE_REP.address);
-  set("repOffice",ACTIVE_REP.office);
-  set("repCell",ACTIVE_REP.cell);
-  const email=document.getElementById("repEmail");
-  if(email){email.textContent=ACTIVE_REP.email;email.href="mailto:"+ACTIVE_REP.email}
-  const note=document.getElementById("teamRepNote");
-  if(note)note.textContent=`Your Johnstone Supply sales representative, ${ACTIVE_REP.name}, will receive your completed profile.`;
-  const photo=document.getElementById("repPhoto");
-  if(photo && ACTIVE_REP.photo)photo.src=ACTIVE_REP.photo;
-  document.title=`Contractor Profile — ${ACTIVE_REP.name}`;
-}
-applyRepProfile();
-
-const setupPanel=document.getElementById("repSetupPanel");
-if(params.get("setup")==="1" && setupPanel){
-  setupPanel.hidden=false;
-  const u=id=>document.getElementById(id);
-  u("setupRepId").value=ACTIVE_REP.id||"";
-  u("setupName").value=ACTIVE_REP.name||"";
-  u("setupTitle").value=ACTIVE_REP.title||"Inside Sales Associate";
-  u("setupCompany").value=ACTIVE_REP.company||"";
-  u("setupAddress").value=ACTIVE_REP.address||"";
-  u("setupOffice").value=ACTIVE_REP.office||"";
-  u("setupCell").value=ACTIVE_REP.cell||"";
-  u("setupEmail").value=ACTIVE_REP.email||"";
-  u("setupPhoto").value=(linkedRep&&linkedRep.photo&&linkedRep.photo.startsWith("http"))?linkedRep.photo:"";
-}
-function makeRepLink(profile){
-  // Never put an embedded data:image payload into a shareable URL.
-  // Those images can make the URL megabytes long and browsers may fail to open it.
-  const safeProfile={...profile};
-  if(typeof safeProfile.photo==="string" && /^data:/i.test(safeProfile.photo)) safeProfile.photo="";
-  const json=JSON.stringify(safeProfile);
-  const bytes=new TextEncoder().encode(json);
-  let binary="";bytes.forEach(b=>binary+=String.fromCharCode(b));
-  const encoded=btoa(binary).replace(/\+/g,"-").replace(/\//g,"_").replace(/=+$/,"");
-  const url=new URL(window.location.href);
-  url.search="";
-  url.hash="";
-  url.searchParams.set("profile",encoded);
-  return url.toString();
-}
-function generateRepLink(){
-  const val=id=>document.getElementById(id)?.value.trim()||"";
-  const profile={
-    id:val("setupRepId").toLowerCase().replace(/[^a-z0-9_-]/g,""),
-    name:val("setupName"),
-    title:val("setupTitle"),
-    company:val("setupCompany"),
-    address:val("setupAddress"),
-    office:val("setupOffice"),
-    cell:val("setupCell"),
-    email:val("setupEmail"),
-    photo:val("setupPhoto")
+  const apply=()=>{
+    if(!active)return;
+    set("repName",active.name);set("repTitle",active.title);set("repCompany",active.company);set("repAddress",active.address);set("repOffice",active.office);set("repCell",active.cell);
+    const email=document.getElementById("repEmail"); if(email){email.textContent=active.email;email.href="mailto:"+active.email;}
+    const note=document.getElementById("teamRepNote"); if(note)note.textContent=`Your Johnstone Supply sales representative, ${active.name}, will receive your completed profile.`;
+    const photo=document.getElementById("repPhoto"); if(photo&&active.photo)photo.src=active.photo;
+    document.title=`Contractor Profile — ${active.name}`;
   };
-  const msg=document.getElementById("setupMessage");
-  if(!profile.id||!profile.name||!profile.email){
-    if(msg)msg.textContent="Please enter at least a Rep ID, Name and Email.";
-    return;
+  apply();
+  const setupPanel=document.getElementById("repSetupPanel");
+  if(setupPanel && params.get("setup")==="1"){
+    setupPanel.hidden=false;
   }
-  const link=makeRepLink(profile);
-  const out=document.getElementById("generatedRepLink");
-  if(out)out.value=link;
-  if(msg)msg.textContent="Rep link generated. Copy it and give that link to the salesperson.";
-  window.__generatedRepLink=link;
-  return link;
-}
-async function copyRepLink(){
-  const link=window.__generatedRepLink||document.getElementById("generatedRepLink")?.value||"";
-  const msg=document.getElementById("setupMessage");
-  if(!link)return;
-  try{await navigator.clipboard.writeText(link);if(msg)msg.textContent="Rep link copied to clipboard."}
-  catch(e){document.getElementById("generatedRepLink")?.select();if(msg)msg.textContent="Link selected — press Ctrl+C to copy."}
-}
+})();
 </script>
 
-<script id="masterAdminEngine">
+<script id="publishedFormEngine">
 (function(){
-  const params=new URLSearchParams(window.location.search);
-  const ADMIN_KEY="contractorProfileMasterV3";
-  const DEFAULT_REP={
-    id:"anthony",name:"Anthony Crumity",title:"Inside Sales Associate",company:"Johnstone Supply - JTeam Group",
-    address:"3650 Junction Blvd, Garner, NC 27606",office:"(919) 661-5565 ext: 8569",cell:"(919) 418-2183",
-    email:"anthony.crumity@jteamgroup.com",photo:document.getElementById("repPhoto")?.getAttribute("src")||""
-  };
-
-  const cleanText=v=>String(v??"").replace(/\s+/g," ").trim();
-  const idSafe=v=>cleanText(v).toLowerCase().replace(/[^a-z0-9_-]/g,"");
-  const b64Encode=obj=>{
-    const bytes=new TextEncoder().encode(JSON.stringify(obj)); let bin="";
-    bytes.forEach(b=>bin+=String.fromCharCode(b));
-    return btoa(bin).replace(/\+/g,"-").replace(/\//g,"_").replace(/=+$/g,"");
-  };
-  const b64Decode=str=>{
-    try{const pad="=".repeat((4-(str.length%4))%4); const bin=atob((str+pad).replace(/-/g,"+").replace(/_/g,"/")); const bytes=Uint8Array.from(bin,c=>c.charCodeAt(0)); return JSON.parse(new TextDecoder().decode(bytes));}
-    catch(e){return null;}
-  };
-
-  function discoverQuestions(){
-    const out=[]; const form=document.getElementById("form"); if(!form)return out;
-    let i=0;
-    [...form.children].forEach(el=>{
-      if(el.matches("label") && !el.classList.contains("choice")){
-        const input=el.querySelector("input,textarea,select"); if(!input||!input.name)return;
-        const qid=input.name;
-        el.dataset.qid=qid;
-        const raw=[...el.childNodes].find(n=>n.nodeType===3&&cleanText(n.textContent));
-        out.push({id:qid,type:"field",defaultLabel:cleanText(raw?.textContent||qid).replace(/\s*\*\s*$/,""),label:cleanText(raw?.textContent||qid).replace(/\s*\*\s*$/,""),required:!!input.required,active:true,custom:false,order:i++});
-      } else if(el.matches("fieldset")){
-        const legend=el.querySelector("legend"); const input=el.querySelector("input,textarea,select"); if(!legend||!input||!input.name)return;
-        const qid=input.name;
-        el.dataset.qid=qid;
-        const base=cleanText(legend.textContent).replace(/\s*\*\s*$/,"",);
-        out.push({id:qid,type:"group",defaultLabel:base,label:base,required:[...el.querySelectorAll("input")].some(x=>x.required),active:true,custom:false,order:i++,inputType:input.type||"checkbox",options:[...el.querySelectorAll(".choice")].map(c=>({value:c.querySelector("input")?.value||"",label:cleanText(c.querySelector("span")?.textContent||c.querySelector("input")?.value||"")}))});
-      }
-    });
-    return out;
-  }
-
-  const DISCOVERED=discoverQuestions();
-  const DEFAULT_QUESTIONS=DISCOVERED.map(q=>({...q}));
-
-  function getStateFromStorage(){
-    try{const raw=localStorage.getItem(ADMIN_KEY); return raw?JSON.parse(raw):null;}catch(e){return null;}
-  }
-  function saveState(state){
-    localStorage.setItem(ADMIN_KEY,JSON.stringify(state));
-    window.__MASTER_STATE=state;
-  }
-
-  function defaultState(){
-    return {version:4, reps:[DEFAULT_REP], questions:DEFAULT_QUESTIONS, customQuestions:[]};
-  }
-
-  function normalizeState(s){
-    const base=defaultState();
-    const reps=Array.isArray(s?.reps)?s.reps.filter(r=>r&&r.id&&r.name&&r.email).map(r=>({...DEFAULT_REP,...r,id:idSafe(r.id)})):base.reps;
-    const qMap=new Map((Array.isArray(s?.questions)?s.questions:base.questions).map(q=>[q.id,q]));
-    const questions=base.questions.map(q=>{const merged={...q,...(qMap.get(q.id)||{})}; if(q.options&&!Array.isArray(merged.options))merged.options=JSON.parse(JSON.stringify(q.options)); return merged;});
-    const customs=Array.isArray(s?.customQuestions)?s.customQuestions.filter(q=>q&&q.id&&q.label).map(q=>({...q,custom:true,type:"custom"})):[];
-    return {version:4,reps,questions,customQuestions:customs};
-  }
-
-  const masterFromHash=b64Decode((window.location.hash||"").replace(/^#config=/,""));
-  const masterFromQuery=b64Decode(params.get("master")||"");
-  let state=normalizeState(masterFromHash||masterFromQuery||getStateFromStorage()||defaultState());
-  saveState(state);
-  window.__MASTER_STATE=state;
-
-  function currentConfig(){return {questions:state.questions,customQuestions:state.customQuestions};}
-  function makeLink(rep){
-    // Keep the shareable link browser-safe. Embedded base64 image data should never go into a URL.
-    const safeRep={...rep};
-    if(typeof safeRep.photo==="string" && /^data:/i.test(safeRep.photo)) safeRep.photo="";
-    const u=new URL(window.location.href); u.search=""; u.hash="";
-    u.searchParams.set("rep",safeRep.id);
-    u.searchParams.set("profile",b64Encode(safeRep));
-    u.searchParams.set("cfg",b64Encode(currentConfig()));
-    return u.toString();
-  }
-  function readLinkedConfig(){return b64Decode(params.get("cfg")||"");}
-  const linkedCfg=readLinkedConfig();
-  function applyQuestionConfig(cfg){
-    const qcfg=cfg&&Array.isArray(cfg.questions)?cfg.questions:state.questions;
+  const cfg=window.CONTRACTOR_MASTER_CONFIG||{};
+  const esc=s=>String(s??"").replace(/[&<>\"]/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':'&quot;'}[m]));
+  function applyPublishedQuestionConfig(config){
+    window.__ACTIVE_FORM_CONFIG=config||cfg;
+    const qcfg=Array.isArray(config?.questions)?config.questions:[];
     qcfg.forEach(q=>{
       const el=document.querySelector('[data-qid="'+CSS.escape(q.id)+'"]');
       if(!el)return;
-      el.hidden=(q.active===false);
-      if(el.matches("fieldset")){
-        const lg=el.querySelector("legend"); if(lg)lg.textContent=q.label+(q.required?" *":"");
-        const opts=Array.isArray(q.options)?q.options:[];
-        const wrap=el.querySelector('.choices');
-        if(wrap && opts.length){
-          const existingInputs=[...wrap.querySelectorAll('input')];
-          const checked=new Set(existingInputs.filter(x=>x.checked).map(x=>x.value));
-          wrap.innerHTML=opts.map(o=>{
-            const type=(q.inputType||existingInputs[0]?.type||'checkbox')==='radio'?'radio':'checkbox';
-            const name=existingInputs[0]?.name||q.id;
-            const val=String(o.value||o.label||'');
-            return '<label class="choice"><input type="'+type+'" name="'+escapeAttr(name)+'" value="'+escapeHtml(val)+'"'+(checked.has(val)?' checked':'')+'><span>'+escapeHtml(o.label||val)+'</span></label>';
-          }).join('');
+      el.hidden=q.active===false;
+      if(el.matches('fieldset')){
+        const lg=el.querySelector('legend'); if(lg)lg.textContent=q.label+(q.required?' *':'');
+        const wrap=el.querySelector('.choices'),opts=Array.isArray(q.options)?q.options:[];
+        if(wrap){
+          const existing=[...wrap.querySelectorAll('input')];
+          const checked=new Set(existing.filter(x=>x.checked).map(x=>x.value));
+          const type=q.inputType==='radio'?'radio':'checkbox';
+          const name=existing[0]?.name||q.id;
+          wrap.innerHTML=opts.map(o=>{const v=String(o.value??o.label??'');return '<label class="choice"><input type="'+type+'" name="'+esc(name)+'" value="'+esc(v)+'"'+(checked.has(v)?' checked':'')+'><span>'+esc(o.label??v)+'</span></label>';}).join('');
         }
-      } else {
-        const raw=[...el.childNodes].find(n=>n.nodeType===3&&cleanText(n.textContent));
-        if(raw)raw.textContent=q.label+(q.required?" *":"");
-        const inp=el.querySelector('input,textarea,select'); if(inp){inp.required=!!q.required; if(q.inputType==='textarea' && inp.tagName!=='TEXTAREA'){const ta=document.createElement('textarea');ta.name=inp.name;ta.rows=3;ta.required=inp.required;inp.replaceWith(ta);} }
+      }else{
+        const raw=[...el.childNodes].find(n=>n.nodeType===3&&String(n.textContent||'').trim()); if(raw)raw.textContent=q.label+(q.required?' *':'');
+        const inp=el.querySelector('input,textarea,select'); if(inp)inp.required=!!q.required;
       }
     });
-    (cfg&&Array.isArray(cfg.customQuestions)?cfg.customQuestions:state.customQuestions).forEach(q=>{
-      let el=document.getElementById("customq-"+q.id);
-      if(!el){
-        const btn=document.querySelector('#form button[type="submit"]');
-        if(!btn)return;
-        el=document.createElement("label"); el.id="customq-"+q.id; el.dataset.customQuestion=q.id; el.className='custom-question-field';
-        btn.parentNode.insertBefore(el,btn);
-      }
-      el.hidden=(q.active===false);
-      const inputType=q.inputType||'text';
-      const labelText=q.label+(q.required?" *":"");
-      if(inputType==='checkbox'||inputType==='radio'){
-        const opts=Array.isArray(q.options)?q.options:[];
-        el.innerHTML='<span class="custom-q-label">'+escapeHtml(labelText)+'</span><div class="choices">'+opts.map(o=>'<label class="choice"><input type="'+inputType+'" name="'+escapeAttr(q.id)+'" value="'+escapeHtml(String(o.value||o.label||''))+'"'+(q.required?' required':'')+'><span>'+escapeHtml(o.label||o.value||'')+'</span></label>').join('')+'</div>';
-      } else if(inputType==='textarea'){
-        el.innerHTML=escapeHtml(labelText)+'<textarea name="'+escapeAttr(q.id)+'" rows="3" '+(q.required?'required':'')+' placeholder="Your answer"></textarea>';
-      } else {
-        el.innerHTML=escapeHtml(labelText)+'<input name="'+escapeAttr(q.id)+'" type="text" '+(q.required?'required':'')+' placeholder="Your answer">';
-      }
+    const customs=Array.isArray(config?.customQuestions)?config.customQuestions:[];
+    const submit=document.querySelector('#form button[type="submit"]');
+    if(!submit)return;
+    customs.forEach(q=>{
+      let el=document.getElementById('customq-'+q.id);
+      if(!el){el=document.createElement('label');el.id='customq-'+q.id;el.dataset.customQuestion=q.id;el.className='custom-question-field';submit.parentNode.insertBefore(el,submit);}
+      el.hidden=q.active===false;
+      const t=q.inputType||'text',label=q.label+(q.required?' *':'');
+      if(t==='checkbox'||t==='radio')el.innerHTML='<span class="custom-q-label">'+esc(label)+'</span><div class="choices">'+(Array.isArray(q.options)?q.options:[]).map(o=>'<label class="choice"><input type="'+t+'" name="'+esc(q.id)+'" value="'+esc(String(o.value??o.label??''))+'"'+(q.required?' required':'')+'><span>'+esc(o.label??o.value??'')+'</span></label>').join('')+'</div>';
+      else if(t==='textarea')el.innerHTML=esc(label)+'<textarea name="'+esc(q.id)+'" rows="3" '+(q.required?'required':'')+' placeholder="Your answer"></textarea>';
+      else el.innerHTML=esc(label)+'<input name="'+esc(q.id)+'" type="text" '+(q.required?'required':'')+' placeholder="Your answer">';
     });
   }
-  function escapeHtml(s){return String(s).replace(/[&<>\"]/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[m]));}
-  function escapeAttr(s){return String(s).replace(/&/g,"&amp;").replace(/"/g,"&quot;").replace(/</g,"&lt;").replace(/>/g,"&gt;");}
-  applyQuestionConfig(linkedCfg||currentConfig());
-
-  // New per-rep loader: preserve old ?profile links for compatibility.
-  const activeProfile=b64Decode(params.get("profile")||"");
-  if(activeProfile&&activeProfile.name&&activeProfile.email){
-    // If the shareable link omitted a data URI photo, keep the page's built-in/default photo.
-    if(!activeProfile.photo) delete activeProfile.photo;
-    window.ACTIVE_REP_OVERRIDE=activeProfile;
+  window.applyPublishedQuestionConfig=applyPublishedQuestionConfig;
+  applyPublishedQuestionConfig(cfg);
+})();
+</script>
+<script id="masterAdminEngine">
+(function(){
+  const params=new URLSearchParams(window.location.search);
+  const ADMIN_KEY="contractorProfileMasterV6";
+  const published=window.CONTRACTOR_MASTER_CONFIG||{};
+  const cleanText=v=>String(v??"").replace(/\s+/g," ").trim();
+  const idSafe=v=>cleanText(v).toLowerCase().replace(/[^a-z0-9_-]/g,"");
+  const esc=s=>String(s??"").replace(/[&<>\"]/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':'&quot;'}[m]));
+  const deep=o=>JSON.parse(JSON.stringify(o));
+  const builtInQuestions=Array.isArray(published.questions)?deep(published.questions):[];
+  const fallbackRep={id:"anthony",name:"Anthony Crumity",title:"Inside Sales Associate",company:"Johnstone Supply - JTeam Group",address:"3650 Junction Blvd, Garner, NC 27606",office:"(919) 661-5565 ext: 8569",cell:"(919) 418-2183",email:"anthony.crumity@jteamgroup.com",photo:""};
+  const defaultState=()=>({version:6,reps:Array.isArray(published.reps)&&published.reps.length?deep(published.reps):[fallbackRep],questions:builtInQuestions,customQuestions:Array.isArray(published.customQuestions)?deep(published.customQuestions):[]});
+  function normalizeState(s){
+    const base=defaultState();
+    const reps=Array.isArray(s?.reps)?s.reps.filter(r=>r&&r.id&&r.name&&r.email).map(r=>({...fallbackRep,...r,id:idSafe(r.id)})).filter(r=>r.id):base.reps;
+    const qMap=new Map((Array.isArray(s?.questions)?s.questions:base.questions).map(q=>[q.id,q]));
+    const questions=base.questions.map(q=>{const merged={...q,...(qMap.get(q.id)||{})};if(q.options&&!Array.isArray(merged.options))merged.options=deep(q.options);return merged;});
+    const customs=Array.isArray(s?.customQuestions)?s.customQuestions.filter(q=>q&&q.id&&q.label).map(q=>({...q,custom:true,type:"custom",inputType:q.inputType||"text",active:q.active!==false})):base.customQuestions;
+    return {version:6,reps,questions,customQuestions:customs};
   }
-
-  const adminPanel=document.getElementById("repSetupPanel");
-  if(!adminPanel)return;
+  function load(){try{const raw=localStorage.getItem(ADMIN_KEY);return raw?normalizeState(JSON.parse(raw)):defaultState();}catch(e){return defaultState();}}
+  let state=load();
+  const save=()=>{localStorage.setItem(ADMIN_KEY,JSON.stringify(state));window.__MASTER_STATE=state;};
+  window.__MASTER_STATE=state;
   const isAdmin=params.get("admin")==="1"||params.get("setup")==="1";
-  if(!isAdmin){ adminPanel.remove(); return; }
-  adminPanel.hidden=false;
+  const adminPanel=document.getElementById("repSetupPanel");
+  if(adminPanel && isAdmin)adminPanel.hidden=false;
+  if(!isAdmin){if(adminPanel)adminPanel.remove();return;}
 
   const panes=[...document.querySelectorAll("[data-admin-pane]")];
-  document.querySelectorAll("[data-admin-tab]").forEach(btn=>btn.addEventListener("click",()=>{
-    document.querySelectorAll("[data-admin-tab]").forEach(x=>x.classList.toggle("active",x===btn));
-    panes.forEach(p=>p.hidden=p.dataset.adminPane!==btn.dataset.adminTab);
-  }));
-
-  const val=id=>document.getElementById(id)?.value?.trim()||"";
-  const setv=(id,v)=>{const e=document.getElementById(id);if(e)e.value=v||""};
-  let editingRepId=null;
-
-  function repDirectory(){
-    const box=document.getElementById("repDirectory"); if(!box)return;
-    box.innerHTML="";
-    state.reps.forEach(rep=>{
-      const row=document.createElement("div"); row.className="rep-row";
-      row.innerHTML='<div class="rep-main"><b>'+escapeHtml(rep.name)+'</b><span>'+escapeHtml(rep.title||"")+'</span><small>'+escapeHtml(rep.email)+'</small></div>'+
-        '<div class="rep-actions"><button type="button" data-action="edit" data-id="'+escapeAttr(rep.id)+'">Edit</button><button type="button" data-action="copy" data-id="'+escapeAttr(rep.id)+'">Copy Link</button><button type="button" data-action="open" data-id="'+escapeAttr(rep.id)+'">Open</button><button type="button" class="danger" data-action="delete" data-id="'+escapeAttr(rep.id)+'">Delete</button></div>';
-      box.appendChild(row);
-    });
-    if(!state.reps.length)box.innerHTML='<div class="muted">No salespeople yet.</div>';
-  }
-  function showRepEditor(rep){
-    document.getElementById("repEditorCard").hidden=false;
-    setv("adminRepId",rep?.id||""); setv("adminRepName",rep?.name||""); setv("adminRepTitle",rep?.title||""); setv("adminRepCompany",rep?.company||""); setv("adminRepAddress",rep?.address||""); setv("adminRepOffice",rep?.office||""); setv("adminRepCell",rep?.cell||""); setv("adminRepEmail",rep?.email||""); setv("adminRepPhoto",rep?.photo||"");
-    editingRepId=rep?.id||null;
-  }
-  function hideRepEditor(){document.getElementById("repEditorCard").hidden=true;editingRepId=null;}
+  document.querySelectorAll("[data-admin-tab]").forEach(btn=>btn.addEventListener("click",()=>{document.querySelectorAll("[data-admin-tab]").forEach(x=>x.classList.toggle("active",x===btn));panes.forEach(p=>p.hidden=p.dataset.adminPane!==btn.dataset.adminTab);}));
+  const val=id=>document.getElementById(id)?.value?.trim()||""; const setv=(id,v)=>{const e=document.getElementById(id);if(e)e.value=v??""}; let editingRepId=null;
+  const basePath=()=>{const u=new URL(window.location.href);u.search="";u.hash="";return u;};
+  function makeShortRepLink(rep){const u=basePath();u.searchParams.set("rep",idSafe(rep.id));return u.toString();}
+  function showRepEditor(rep){editingRepId=rep?.id||null;document.getElementById("repEditorCard").hidden=false;setv("adminRepId",rep?.id||"");setv("adminRepName",rep?.name||"");setv("adminRepTitle",rep?.title||"");setv("adminRepCompany",rep?.company||"");setv("adminRepAddress",rep?.address||"");setv("adminRepOffice",rep?.office||"");setv("adminRepCell",rep?.cell||"");setv("adminRepEmail",rep?.email||"");setv("adminRepPhoto",(rep?.photo&&/^https?:/i.test(rep.photo))?rep.photo:"");}
+  function hideRepEditor(){editingRepId=null;document.getElementById("repEditorCard").hidden=true;}
+  function repDirectory(){const box=document.getElementById("repDirectory");if(!box)return;box.innerHTML="";state.reps.forEach(rep=>{const row=document.createElement("div");row.className="rep-row";row.innerHTML='<div class="rep-main"><b>'+esc(rep.name)+'</b><span>'+esc(rep.title)+'</span><small>'+esc(rep.email)+'</small></div><div class="rep-actions"><button type="button" data-rep-edit="'+esc(rep.id)+'">Edit</button><button type="button" data-rep-copy="'+esc(rep.id)+'">Copy Link</button><button type="button" data-rep-open="'+esc(rep.id)+'">Open</button><button type="button" class="danger" data-rep-delete="'+esc(rep.id)+'">Deactivate</button></div>';box.appendChild(row);});}
   document.getElementById("adminNewRepBtn").addEventListener("click",()=>showRepEditor(null));
   document.getElementById("adminCancelRepBtn").addEventListener("click",hideRepEditor);
-  document.getElementById("adminSaveRepBtn").addEventListener("click",()=>{
-    const rep={id:idSafe(val("adminRepId")),name:val("adminRepName"),title:val("adminRepTitle"),company:val("adminRepCompany"),address:val("adminRepAddress"),office:val("adminRepOffice"),cell:val("adminRepCell"),email:val("adminRepEmail"),photo:val("adminRepPhoto")};
-    const msg=document.getElementById("adminRepMessage");
-    if(!rep.id||!rep.name||!rep.email){msg.textContent="Rep ID, name, and email are required.";return;}
-    const dup=state.reps.some(r=>r.id===rep.id&&r.id!==editingRepId); if(dup){msg.textContent="That Rep ID already exists. Use a unique ID.";return;}
-    if(editingRepId){state.reps=state.reps.map(r=>r.id===editingRepId?rep:r);}else state.reps.push(rep);
-    saveState(state); repDirectory(); hideRepEditor(); msg.textContent="Salesperson saved. Generate/copy the updated link for this rep.";
-  });
-  document.getElementById("repDirectory").addEventListener("click",async e=>{
-    const b=e.target.closest("button[data-action]"); if(!b)return; const rep=state.reps.find(r=>r.id===b.dataset.id); if(!rep)return;
-    const action=b.dataset.action;
-    if(action==="edit")showRepEditor(rep);
-    if(action==="delete"){
-      if(!confirm("Delete "+rep.name+" from the manager directory? Existing links will still work, but this rep will no longer appear here."))return;
-      state.reps=state.reps.filter(r=>r.id!==rep.id); saveState(state); repDirectory();
-    }
-    if(action==="open")window.open(makeLink(rep),"_blank");
-    if(action==="copy"){
-      try{await navigator.clipboard.writeText(makeLink(rep));document.getElementById("adminRepMessage").textContent="Link copied for "+rep.name+".";}
-      catch(err){prompt("Copy this rep link:",makeLink(rep));}
-    }
-  });
-
-  function questionDirectory(){
-    const box=document.getElementById("questionDirectory"); if(!box)return; box.innerHTML="";
-    const all=[...state.questions,...state.customQuestions.map(q=>({...q,type:"custom",custom:true}))];
-    all.forEach(q=>{
-      const row=document.createElement("div"); row.className="question-row";
-      const canOptions=(q.type==='group'||q.custom) && ((q.type==='group' && Array.isArray(q.options)) || (q.custom && ['checkbox','radio'].includes(q.inputType)));
-      const optionHtml=canOptions?'<div class="question-options" data-q-options="'+escapeAttr(q.id)+'">'+(Array.isArray(q.options)?q.options:[]).map((o,i)=>'<div class="question-option-row"><input type="text" value="'+escapeAttr(o.label||o.value||'')+'" data-q-option-label="'+escapeAttr(q.id)+'" data-index="'+i+'"><button type="button" data-q-option-delete="'+escapeAttr(q.id)+'" data-index="'+i+'">Remove</button></div>').join('')+'</div><button type="button" class="question-add-option" data-q-option-add="'+escapeAttr(q.id)+'">+ Add option</button>':'';
-      const customType=q.custom?'<select data-q-type="'+escapeAttr(q.id)+'"><option value="text" '+((q.inputType||'text')==='text'?'selected':'')+'>Text answer</option><option value="textarea" '+(q.inputType==='textarea'?'selected':'')+'>Long text</option><option value="radio" '+(q.inputType==='radio'?'selected':'')+'>Single choice</option><option value="checkbox" '+(q.inputType==='checkbox'?'selected':'')+'>Multiple choice</option></select>':'';
-      row.innerHTML='<div class="question-toggle"><input type="checkbox" '+(q.active!==false?'checked':'')+' data-q-toggle="'+escapeAttr(q.id)+'"></div>'+
-        '<div class="question-edit"><input type="text" value="'+escapeAttr(q.label)+'" data-q-label="'+escapeAttr(q.id)+'">'+customType+'<small>'+escapeHtml(q.custom?'Custom question':'Built-in question')+' · '+escapeHtml(q.required?'Required':'Optional')+'</small>'+optionHtml+'</div>'+
-        '<div class="question-actions">'+(q.custom?'<button type="button" class="danger" data-q-delete="'+escapeAttr(q.id)+'">Delete</button>':'<button type="button" data-q-reset="'+escapeAttr(q.id)+'">Reset</button>')+'</div>';
-      box.appendChild(row);
-    });
-  }
-  document.getElementById("adminAddQuestionBtn").addEventListener("click",()=>{
-    const id="custom_"+Date.now();
-    state.customQuestions.push({id,label:"New question",required:false,active:true,custom:true,type:"custom",inputType:"text",options:[]}); saveState(state); questionDirectory();
-    document.getElementById("adminQuestionMessage").textContent="Custom question added. Choose a question type and edit its options above.";
-    applyQuestionConfig({questions:state.questions,customQuestions:state.customQuestions});
-  });
-  document.getElementById("questionDirectory").addEventListener("input",e=>{
-    const id=e.target.dataset.qLabel; if(id){const q=state.questions.find(x=>x.id===id)||state.customQuestions.find(x=>x.id===id); if(q){q.label=e.target.value;saveState(state);applyQuestionConfig(currentConfig());}return;}
-    const oid=e.target.dataset.qOptionLabel; if(oid){const q=state.questions.find(x=>x.id===oid)||state.customQuestions.find(x=>x.id===oid); const i=Number(e.target.dataset.index); if(q&&Array.isArray(q.options)&&q.options[i]){q.options[i].label=e.target.value;q.options[i].value=e.target.value;saveState(state);applyQuestionConfig(currentConfig());}}
-  });
-  document.getElementById("questionDirectory").addEventListener("change",e=>{
-    const id=e.target.dataset.qToggle; if(id){const q=state.questions.find(x=>x.id===id)||state.customQuestions.find(x=>x.id===id); if(q){q.active=e.target.checked;saveState(state);applyQuestionConfig(currentConfig());}return;}
-    const tid=e.target.dataset.qType; if(tid){const q=state.customQuestions.find(x=>x.id===tid); if(q){q.inputType=e.target.value; if((q.inputType==='checkbox'||q.inputType==='radio')&&!Array.isArray(q.options))q.options=[{value:'Option 1',label:'Option 1'},{value:'Option 2',label:'Option 2'}]; if(!['checkbox','radio'].includes(q.inputType))q.options=[];saveState(state);questionDirectory();applyQuestionConfig(currentConfig());}}
-  });
-  document.getElementById("questionDirectory").addEventListener("click",e=>{
-    const reset=e.target.closest("button[data-q-reset]"); const del=e.target.closest("button[data-q-delete]"); const addOpt=e.target.closest("button[data-q-option-add]"); const delOpt=e.target.closest("button[data-q-option-delete]");
-    if(reset){const q=state.questions.find(x=>x.id===reset.dataset.qReset); if(q){const d=DEFAULT_QUESTIONS.find(x=>x.id===q.id);if(d)Object.assign(q,JSON.parse(JSON.stringify(d)));q.active=true;}saveState(state);questionDirectory();applyQuestionConfig(currentConfig());}
-    if(del){state.customQuestions=state.customQuestions.filter(x=>x.id!==del.dataset.qDelete);saveState(state);questionDirectory();applyQuestionConfig(currentConfig());}
-    if(addOpt){const q=state.questions.find(x=>x.id===addOpt.dataset.qOptionAdd)||state.customQuestions.find(x=>x.id===addOpt.dataset.qOptionAdd);if(q){q.options=Array.isArray(q.options)?q.options:[];const n=q.options.length+1;q.options.push({value:'Option '+n,label:'Option '+n});saveState(state);questionDirectory();applyQuestionConfig(currentConfig());}}
-    if(delOpt){const q=state.questions.find(x=>x.id===delOpt.dataset.qOptionDelete)||state.customQuestions.find(x=>x.id===delOpt.dataset.qOptionDelete);if(q&&Array.isArray(q.options)){q.options.splice(Number(delOpt.dataset.index),1);saveState(state);questionDirectory();applyQuestionConfig(currentConfig());}}
-  });
-
-  function downloadText(name,text,type){const blob=new Blob([text],{type}); const a=document.createElement("a"); a.href=URL.createObjectURL(blob); a.download=name; document.body.appendChild(a); a.click(); a.remove(); setTimeout(()=>URL.revokeObjectURL(a.href),1000);}
+  document.getElementById("adminSaveRepBtn").addEventListener("click",()=>{const rep={id:idSafe(val("adminRepId")),name:val("adminRepName"),title:val("adminRepTitle"),company:val("adminRepCompany"),address:val("adminRepAddress"),office:val("adminRepOffice"),cell:val("adminRepCell"),email:val("adminRepEmail"),photo:val("adminRepPhoto")};const msg=document.getElementById("adminRepMessage");if(!rep.id||!rep.name||!rep.email){msg.textContent="Please enter at least a Rep ID, Name and Email.";return;}if(!editingRepId&&state.reps.some(r=>r.id===rep.id)){msg.textContent="That Rep ID already exists.";return;}if(editingRepId&&editingRepId!==rep.id&&state.reps.some(r=>r.id===rep.id)){msg.textContent="That Rep ID is already in use.";return;}if(editingRepId){const i=state.reps.findIndex(r=>r.id===editingRepId);if(i>=0)state.reps[i]=rep;}else state.reps.push(rep);save();repDirectory();hideRepEditor();msg.textContent="Salesperson saved. Their existing short link will use this Rep ID after you publish the configuration.";});
+  document.getElementById("repDirectory").addEventListener("click",async e=>{const id=e.target.dataset.repEdit||e.target.dataset.repCopy||e.target.dataset.repOpen||e.target.dataset.repDelete;if(!id)return;const rep=state.reps.find(r=>r.id===id);if(!rep)return;if(e.target.dataset.repEdit){showRepEditor(rep);return;}const link=makeShortRepLink(rep);if(e.target.dataset.repOpen){window.open(link,"_blank");return;}if(e.target.dataset.repCopy){try{await navigator.clipboard.writeText(link);document.getElementById("adminRepMessage").textContent="Short link copied for "+rep.name+".";}catch(err){prompt("Copy this rep link:",link);}return;}if(e.target.dataset.repDelete){if(!confirm("Deactivate "+rep.name+"? Their old short link will stop working after the next published configuration."))return;state.reps=state.reps.filter(r=>r.id!==id);save();repDirectory();document.getElementById("adminRepMessage").textContent=rep.name+" deactivated.";}});
+  function questionDirectory(){const box=document.getElementById("questionDirectory");if(!box)return;box.innerHTML="";const all=[...state.questions,...state.customQuestions.map(q=>({...q,custom:true,type:"custom"}))];all.sort((a,b)=>(a.order??999)-(b.order??999));all.forEach(q=>{const canOptions=(q.type==='group'||(q.custom&&['checkbox','radio'].includes(q.inputType)));const typeSelect=q.custom?'<select data-q-type="'+esc(q.id)+'"><option value="text" '+((q.inputType||'text')==='text'?'selected':'')+'>Text answer</option><option value="textarea" '+(q.inputType==='textarea'?'selected':'')+'>Long text</option><option value="radio" '+(q.inputType==='radio'?'selected':'')+'>Single choice</option><option value="checkbox" '+(q.inputType==='checkbox'?'selected':'')+'>Multiple choice</option></select>':'';const required='<label style="display:inline-flex;align-items:center;gap:5px;font-size:12px;margin-top:7px"><input type="checkbox" data-q-required="'+esc(q.id)+'" '+(q.required?'checked':'')+'> Required</label>';const opts=canOptions?'<div class="question-options">'+(Array.isArray(q.options)?q.options:[]).map((o,i)=>'<div class="question-option-row"><input type="text" value="'+esc(o.label||o.value||'')+'" data-q-option-label="'+esc(q.id)+'" data-index="'+i+'"><button type="button" data-q-option-delete="'+esc(q.id)+'" data-index="'+i+'">Remove</button></div>').join('')+'</div><button type="button" class="question-add-option" data-q-option-add="'+esc(q.id)+'">+ Add option</button>':'';const row=document.createElement("div");row.className="question-row";row.innerHTML='<div class="question-toggle"><input type="checkbox" '+(q.active!==false?'checked':'')+' data-q-toggle="'+esc(q.id)+'"></div><div class="question-edit"><input type="text" value="'+esc(q.label)+'" data-q-label="'+esc(q.id)+'">'+typeSelect+required+'<small>'+esc(q.custom?'Custom question':'Built-in question')+'</small>'+opts+'</div><div class="question-actions">'+(q.custom?'<button type="button" class="danger" data-q-delete="'+esc(q.id)+'">Delete</button>':'<button type="button" data-q-reset="'+esc(q.id)+'">Reset</button>')+'</div>';box.appendChild(row);});}
+  document.getElementById("adminAddQuestionBtn").addEventListener("click",()=>{const id="custom_"+Date.now();state.customQuestions.push({id,label:"New question",required:false,active:true,custom:true,type:"custom",inputType:"text",options:[],order:state.questions.length+state.customQuestions.length});save();questionDirectory();document.getElementById("adminQuestionMessage").textContent="Custom question added.";applyQuestionConfig(currentConfig());});
+  const findQ=id=>state.questions.find(q=>q.id===id)||state.customQuestions.find(q=>q.id===id);
+  document.getElementById("questionDirectory").addEventListener("input",e=>{const id=e.target.dataset.qLabel;if(id){const q=findQ(id);if(q){q.label=e.target.value;save();applyQuestionConfig(currentConfig());}return;}const oid=e.target.dataset.qOptionLabel;if(oid){const q=findQ(oid),i=Number(e.target.dataset.index);if(q&&Array.isArray(q.options)&&q.options[i]){q.options[i].label=e.target.value;q.options[i].value=e.target.value;save();applyQuestionConfig(currentConfig());}}});
+  document.getElementById("questionDirectory").addEventListener("change",e=>{const id=e.target.dataset.qToggle;if(id){const q=findQ(id);if(q){q.active=e.target.checked;save();applyQuestionConfig(currentConfig());}return;}const rid=e.target.dataset.qRequired;if(rid){const q=findQ(rid);if(q){q.required=e.target.checked;save();applyQuestionConfig(currentConfig());}return;}const tid=e.target.dataset.qType;if(tid){const q=state.customQuestions.find(x=>x.id===tid);if(q){q.inputType=e.target.value;if(['checkbox','radio'].includes(q.inputType)&&!Array.isArray(q.options))q.options=[{value:'Option 1',label:'Option 1'},{value:'Option 2',label:'Option 2'}];if(!['checkbox','radio'].includes(q.inputType))q.options=[];save();questionDirectory();applyQuestionConfig(currentConfig());}}});
+  document.getElementById("questionDirectory").addEventListener("click",e=>{const reset=e.target.closest('[data-q-reset]'),del=e.target.closest('[data-q-delete]'),add=e.target.closest('[data-q-option-add]'),delOpt=e.target.closest('[data-q-option-delete]');if(reset){const q=findQ(reset.dataset.qReset),d=builtInQuestions.find(x=>x.id===q?.id);if(q&&d)Object.assign(q,deep(d));save();questionDirectory();applyQuestionConfig(currentConfig());}else if(del){state.customQuestions=state.customQuestions.filter(q=>q.id!==del.dataset.qDelete);save();questionDirectory();applyQuestionConfig(currentConfig());}else if(add){const q=findQ(add.dataset.qOptionAdd);if(q){q.options=Array.isArray(q.options)?q.options:[];const n=q.options.length+1;q.options.push({value:'Option '+n,label:'Option '+n});save();questionDirectory();applyQuestionConfig(currentConfig());}}else if(delOpt){const q=findQ(delOpt.dataset.qOptionDelete);if(q&&Array.isArray(q.options)){q.options.splice(Number(delOpt.dataset.index),1);save();questionDirectory();applyQuestionConfig(currentConfig());}}});
+  function currentConfig(){return {version:6,reps:state.reps,questions:state.questions,customQuestions:state.customQuestions};}
+  function applyQuestionConfig(cfg){window.__ACTIVE_FORM_CONFIG=cfg;const qcfg=Array.isArray(cfg?.questions)?cfg.questions:[];qcfg.forEach(q=>{const el=document.querySelector('[data-qid="'+CSS.escape(q.id)+'"]');if(!el)return;el.hidden=q.active===false;if(el.matches('fieldset')){const lg=el.querySelector('legend');if(lg)lg.textContent=q.label+(q.required?' *':'');const wrap=el.querySelector('.choices'),opts=Array.isArray(q.options)?q.options:[];if(wrap){const existing=[...wrap.querySelectorAll('input')];const checked=new Set(existing.filter(x=>x.checked).map(x=>x.value));const type=q.inputType==='radio'?'radio':'checkbox';const name=existing[0]?.name||q.id;wrap.innerHTML=opts.map(o=>{const v=String(o.value??o.label??'');return '<label class="choice"><input type="'+type+'" name="'+esc(name)+'" value="'+esc(v)+'"'+(checked.has(v)?' checked':'')+'><span>'+esc(o.label??v)+'</span></label>';}).join('');}}else{const raw=[...el.childNodes].find(n=>n.nodeType===3&&cleanText(n.textContent));if(raw)raw.textContent=q.label+(q.required?' *':'');const inp=el.querySelector('input,textarea,select');if(inp)inp.required=!!q.required;}});const customs=Array.isArray(cfg?.customQuestions)?cfg.customQuestions:[];const submit=document.querySelector('#form button[type="submit"]');if(submit)customs.forEach(q=>{let el=document.getElementById('customq-'+q.id);if(!el){el=document.createElement('label');el.id='customq-'+q.id;el.dataset.customQuestion=q.id;el.className='custom-question-field';submit.parentNode.insertBefore(el,submit);}el.hidden=q.active===false;const t=q.inputType||'text',label=q.label+(q.required?' *':'');if(t==='checkbox'||t==='radio'){el.innerHTML='<span class="custom-q-label">'+esc(label)+'</span><div class="choices">'+(Array.isArray(q.options)?q.options:[]).map(o=>'<label class="choice"><input type="'+t+'" name="'+esc(q.id)+'" value="'+esc(String(o.value??o.label??''))+'"'+(q.required?' required':'')+'><span>'+esc(o.label??o.value??'')+'</span></label>').join('')+'</div>';}else if(t==='textarea'){el.innerHTML=esc(label)+'<textarea name="'+esc(q.id)+'" rows="3" '+(q.required?'required':'')+' placeholder="Your answer"></textarea>';}else{el.innerHTML=esc(label)+'<input name="'+esc(q.id)+'" type="text" '+(q.required?'required':'')+' placeholder="Your answer">';}});}
+  window.applyQuestionConfig=applyQuestionConfig;window.currentMasterConfig=currentConfig;
+  function downloadText(name,text,type){const blob=new Blob([text],{type}),a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=name;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(a.href),1000);}
+  function publishScriptText(){return '// Published contractor profile configuration. Keep this file next to index.html.\nwindow.CONTRACTOR_MASTER_CONFIG = '+JSON.stringify(currentConfig(),null,2)+';\n';}
   document.getElementById("adminExportBtn").addEventListener("click",()=>downloadText("contractor-profile-master-backup.json",JSON.stringify(state,null,2),"application/json"));
   document.getElementById("adminImportBtn").addEventListener("click",()=>document.getElementById("adminImportFile").click());
-  document.getElementById("adminImportFile").addEventListener("change",e=>{
-    const file=e.target.files?.[0]; if(!file)return; const reader=new FileReader(); reader.onload=()=>{try{state=normalizeState(JSON.parse(reader.result));saveState(state);repDirectory();questionDirectory();applyQuestionConfig(currentConfig());document.getElementById("adminToolsMessage").textContent="Master setup imported.";}catch(err){document.getElementById("adminToolsMessage").textContent="That file could not be imported.";}}; reader.readAsText(file); e.target.value="";
-  });
-  document.getElementById("adminShareMasterBtn").addEventListener("click",()=>{
-    const u=new URL(window.location.href); u.search=""; u.searchParams.set("admin","1"); u.hash="config="+b64Encode(state); const out=document.getElementById("adminMasterLink"); out.value=u.toString(); document.getElementById("adminToolsMessage").textContent="Master link created. Anyone with this link can view/copy the embedded setup, so keep it internal.";
-  });
-  document.getElementById("adminResetDefaultsBtn").addEventListener("click",()=>{
-    if(!confirm("Reset this browser's master setup to the default Anthony profile and original questions?"))return;
-    state=defaultState(); saveState(state); repDirectory();questionDirectory();applyQuestionConfig(currentConfig()); document.getElementById("adminToolsMessage").textContent="Local master reset.";
-  });
-
-  repDirectory(); questionDirectory();
+  document.getElementById("adminImportFile").addEventListener("change",e=>{const f=e.target.files?.[0];if(!f)return;const r=new FileReader();r.onload=()=>{try{state=normalizeState(JSON.parse(r.result));save();repDirectory();questionDirectory();applyQuestionConfig(currentConfig());document.getElementById("adminToolsMessage").textContent="Master backup imported.";}catch(err){document.getElementById("adminToolsMessage").textContent="That file could not be imported.";}};r.readAsText(f);e.target.value="";});
+  document.getElementById("adminShareMasterBtn").addEventListener("click",()=>{const u=basePath();u.searchParams.set("admin","1");const out=document.getElementById("adminMasterLink");out.value=u.toString();document.getElementById("adminToolsMessage").textContent="Master admin link created. This is the same link you can bookmark.";try{navigator.clipboard.writeText(u.toString());}catch(e){}});
+  const publishBtn=document.createElement('button');publishBtn.type='button';publishBtn.className='primary';publishBtn.textContent='Download Published config.js';publishBtn.style.gridColumn='1/-1';document.getElementById('adminShareMasterBtn').parentElement.appendChild(publishBtn);publishBtn.addEventListener('click',()=>{downloadText('config.js',publishScriptText(),'application/javascript');document.getElementById('adminToolsMessage').textContent='config.js downloaded. Upload that file next to index.html in GitHub Pages to publish your latest rep/question changes. Existing ?rep= links do not need to change.';});
+  document.getElementById("adminResetDefaultsBtn").addEventListener("click",()=>{if(!confirm("Reset this browser's master setup to the currently published defaults?"))return;state=defaultState();save();repDirectory();questionDirectory();applyQuestionConfig(currentConfig());document.getElementById("adminToolsMessage").textContent="Local master reset to published defaults.";});
+  // Make wording on the page match the new architecture.
+  document.querySelectorAll('.admin-warning').forEach(w=>w.innerHTML='<b>How publishing works:</b> Your edits are saved in this manager browser immediately. To push them to contractors without changing their links, download <code>config.js</code> and upload that single file to the same GitHub Pages repository as <code>index.html</code>. Your permanent rep links use only <code>?rep=ID</code>.');
+  repDirectory();questionDirectory();applyQuestionConfig(currentConfig());
+  const out=document.getElementById("adminMasterLink");if(out){const u=basePath();u.searchParams.set("admin","1");out.value=u.toString();}
 })();
 </script>
 
 <script>
 const form=document.getElementById("form");
-document.querySelectorAll(".top3 input").forEach(cb=>cb.addEventListener("change",()=>{
- const g=[...document.querySelectorAll('.top3 input[name="'+cb.name+'"]')];
- if(g.filter(x=>x.checked).length>3){cb.checked=false;alert("Please select your top 3 priorities.");}
- g.forEach(x=>x.parentElement.classList.toggle("selected",x.checked));
-}));
-const REPORT_EMAIL=ACTIVE_REP.email;
-const arr=v=>Array.isArray(v)?v:[v];
+const ACTIVE_REP=window.__ACTIVE_REP||{name:"Anthony Crumity",email:"anthony.crumity@jteamgroup.com"};
+const REP_NOT_FOUND=!!window.__REP_NOT_FOUND;
+const arr=v=>Array.isArray(v)?v:(v==null||v===""?[]:[v]);
 const first=v=>Array.isArray(v)?(v[0]||""):(v||"");
 const lines=(label,v)=>label+": "+(Array.isArray(v)?v.join(", "):(v||"Not provided"));
-const opportunity=d=>{
- let s=0;
- if(["6–10","11–20","20+"].includes(first(d.trucks)))s+=2;
- if(["11–20","21–50","50+"].includes(first(d.employees)))s+=1;
- if(arr(d.growthGoals).length)s+=2;
- if(arr(d.upcoming).some(x=>x!=="Nothing currently"))s+=2;
- if(arr(d.workTypes).some(x=>/commercial|new construction/i.test(x)))s+=1;
- if(arr(d.brands).length>=2)s+=1;
- return s>=5?"HIGH":s>=3?"MEDIUM":"LOW";
-};
-const nextAction=d=>{
- if(arr(d.upcoming).some(x=>x!=="Nothing currently"))return "Ask about the upcoming opportunity and timing.";
- if(arr(d.growthGoals).length)return "Discuss their 12-month goal and how you can support it.";
- if(arr(d.otherDistributors).length)return "Ask what causes them to buy elsewhere and address the biggest gap.";
- if(arr(d.priorities).length)return "Lead with their top distributor priorities.";
- return "Schedule a discovery conversation.";
-};
+function currentFormConfig(){return window.__ACTIVE_FORM_CONFIG||window.CONTRACTOR_MASTER_CONFIG||{questions:[],customQuestions:[]};}
+function labelMap(){const m={};[...(currentFormConfig().questions||[]),...(currentFormConfig().customQuestions||[])].forEach(q=>{m[q.id]=q.label||q.defaultLabel||q.id;});return m;}
+function opportunity(d){let score=0;if(["6–10","11–20","20+"].includes(first(d.trucks)))score+=2;if(["11–20","21–50","50+"].includes(first(d.employees)))score+=1;if(arr(d.growthGoals).length)score+=2;if(arr(d.upcoming).some(x=>x!=="Nothing currently"))score+=2;if(arr(d.workTypes).some(x=>/commercial|new construction/i.test(String(x))))score+=1;if(arr(d.brands).length>=2)score+=1;return score>=5?"HIGH":score>=3?"MEDIUM":"LOW";}
+function nextAction(d){if(arr(d.upcoming).some(x=>x!=="Nothing currently"))return "Ask about the upcoming opportunity and timing.";if(arr(d.growthGoals).length)return "Discuss their 12-month goal and how you can support it.";if(arr(d.otherDistributors).length)return "Ask what causes them to buy elsewhere and address the biggest gap.";if(arr(d.priorities).length)return "Lead with their top distributor priorities.";return "Schedule a discovery conversation.";}
+
+document.querySelectorAll(".top3 input").forEach(cb=>cb.addEventListener("change",()=>{const g=[...document.querySelectorAll('.top3 input[name="'+cb.name+'"]')];if(g.filter(x=>x.checked).length>3){cb.checked=false;alert("Please select your top 3 priorities.");}g.forEach(x=>x.parentElement.classList.toggle("selected",x.checked));}));
+
+if(REP_NOT_FOUND){
+  document.querySelectorAll('#form input,#form textarea,#form select,#form button').forEach(el=>el.disabled=true);
+  const intro=document.getElementById('teamRepNote'); if(intro)intro.textContent='This Contractor Profile link is no longer active. Please contact your Johnstone Supply sales representative for a current link.';
+}
+
 form.addEventListener("submit",e=>{
- e.preventDefault();
- const d={submittedAt:new Date().toISOString()};
- new FormData(form).forEach((v,k)=>{if(d[k]){d[k]=Array.isArray(d[k])?d[k].concat(v):[d[k],v]}else d[k]=v});
- const successRep=document.getElementById("successRep"); if(successRep)successRep.textContent=ACTIVE_REP.name;
- const subject="Contractor Profile — "+(d.company||"New Submission")+" — "+ACTIVE_REP.name;
- const body=[
- "CONTRACTOR PROFILE",
- "==================",
- "",
- lines("Assigned Sales Rep",ACTIVE_REP.name),
- lines("Rep Email",ACTIVE_REP.email),
- "",
- lines("Company",d.company),
- lines("Website",d.website),
- lines("Owner / Decision Maker",d.owner),
- lines("Personal Contact",d.personalContact),
- lines("Phone",d.phone),
- lines("Email",d.email),
- "",
- "BUSINESS",
- "--------",
- lines("Ordering Person",d.ordering),
- lines("Employees",d.employees),
- lines("Trucks",d.trucks),
- lines("Work Types",d.workTypes),
- lines("Equipment Brands",d.brands),
- lines("Refrigerants",d.refrigerants),
- lines("Products Purchased Most",d.products),
- lines("Physical Location",d.facility),
- "",
- "DISTRIBUTOR FIT",
- "--------------",
- lines("Top Priorities",d.priorities),
- lines("Distributor Improvement",d.distributorImprove),
- lines("Preferred Contact",d.contactPreference),
- lines("Best Contact Time",d.contactTime),
- lines("Check-in Preference",d.checkin),
- lines("Webstore",d.webstore),
- lines("Webstore Help",d.webstoreHelp),
- lines("Ordering Improvements",d.orderingEasier),
- "",
- "GROWTH",
- "------",
- lines("12-Month Goals",d.growthGoals),
- lines("Upcoming Opportunities",d.upcoming),
- lines("Other Distributors",d.otherDistributors),
- lines("Why They Buy Elsewhere",d.lostReason),
- lines("Additional Notes",d.anythingElse),
- "",
- "AUTOMATED ACCOUNT SNAPSHOT",
- "--------------------------",
- lines("Opportunity",opportunity(d)),
- lines("Next Best Action",nextAction(d)),
- "",
- "Submitted: "+new Date(d.submittedAt).toLocaleString()
- ].join("\n");
- window.location.href="mailto:"+REPORT_EMAIL+"?subject="+encodeURIComponent(subject)+"&body="+encodeURIComponent(body);
-form.style.display="none";document.getElementById("success").style.display="block";window.scrollTo({top:0,behavior:"smooth"});
+  e.preventDefault();
+  if(REP_NOT_FOUND)return;
+  const d={submittedAt:new Date().toISOString()};
+  new FormData(form).forEach((v,k)=>{if(Object.prototype.hasOwnProperty.call(d,k)){d[k]=Array.isArray(d[k])?d[k].concat(v):[d[k],v];}else d[k]=v;});
+  const successRep=document.getElementById("successRep");if(successRep)successRep.textContent=ACTIVE_REP.name;
+  const subject="Contractor Profile — "+(d.company||"New Submission")+" — "+ACTIVE_REP.name;
+  const labels=labelMap();
+  const body=["CONTRACTOR PROFILE","==================","",lines("Assigned Sales Rep",ACTIVE_REP.name),lines("Rep Email",ACTIVE_REP.email),""];
+  Object.keys(d).filter(k=>k!=="submittedAt").forEach(k=>body.push(lines(labels[k]||k,d[k])));
+  body.push("","AUTOMATED ACCOUNT SNAPSHOT","--------------------------",lines("Opportunity",opportunity(d)),lines("Next Best Action",nextAction(d)),"","Submitted: "+new Date(d.submittedAt).toLocaleString());
+  window.location.href="mailto:"+encodeURIComponent( ACTIVE_REP.email).replace(/%40/g,'@')+"?subject="+encodeURIComponent(subject)+"&body="+encodeURIComponent(body.join("\n"));
+  form.style.display="none";const success=document.getElementById("success");if(success)success.style.display="block";window.scrollTo({top:0,behavior:"smooth"});
 });
 </script>
