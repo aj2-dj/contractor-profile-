@@ -82,6 +82,9 @@ button{background:#0759a5}
 .almost-done{background:#fffafa !important;border:2px solid #d71920 !important;box-shadow:0 7px 20px rgba(215,25,32,.10) !important}
 .almost-done strong{display:block;color:#d71920;font-size:21px;letter-spacing:.3px;margin-bottom:5px}
 .almost-done p{line-height:1.5;margin:6px 0}
+
+.admin-tabs{display:flex;gap:8px;flex-wrap:wrap;margin:16px 0}.admin-tab{width:auto!important;padding:10px 14px!important;background:#eef3f8!important;color:#16324a!important;border:1px solid #cad6e1!important}.admin-tab.active{background:#1769e0!important;color:#fff!important;border-color:#1769e0!important}.admin-toolbar{display:flex;justify-content:space-between;gap:16px;align-items:center;margin:12px 0}.admin-toolbar h3{margin:0 0 4px}.admin-toolbar p{margin:0;max-width:720px}.admin-editor{border:1px solid #d8e2ec;background:#f8fbfe;border-radius:14px;padding:15px;margin:12px 0}.rep-directory,.question-directory{display:grid;gap:8px}.rep-row,.question-row{display:flex;gap:12px;align-items:center;justify-content:space-between;border:1px solid #dbe4ec;border-radius:12px;padding:12px;background:#fff}.rep-main{display:grid;gap:2px}.rep-main span,.rep-main small,.question-edit small{color:#657587;font-size:12px}.rep-actions,.question-actions{display:flex;gap:6px;flex-wrap:wrap}.rep-actions button,.question-actions button,.tools-grid button{width:auto!important;padding:9px 11px!important;font-size:13px!important}.rep-actions .danger,.question-actions .danger{background:#b42318!important}.question-toggle input{width:18px;height:18px}.question-edit{flex:1}.question-edit input{margin:0!important}.tools-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}.tools-grid .wide{grid-column:1/-1}.tools-grid input{width:100%;padding:11px;border:1px solid #cbd5e1;border-radius:10px}.admin-warning{margin-top:14px;padding:12px;border-radius:10px;background:#fff7e6;border:1px solid #f1d38d;color:#684b09}.muted{color:#657587}.admin-pane[hidden]{display:none}.rep-row button,.question-row button{border:1px solid #c5d1dc;background:#fff;color:#16324a;border-radius:8px;font-weight:700;cursor:pointer}.rep-row button.danger,.question-row button.danger{color:#fff;border-color:#b42318}
+@media(max-width:700px){.admin-toolbar{flex-direction:column;align-items:stretch}.tools-grid{grid-template-columns:1fr}.rep-row,.question-row{flex-direction:column;align-items:stretch}.rep-actions,.question-actions{justify-content:flex-start}}
 </style>
 <style id="repSetupStyles">
 .rep-setup{margin:14px 0 18px;border:1px solid #cbd8e5;box-shadow:0 8px 22px rgba(12,48,84,.07)}
@@ -122,26 +125,66 @@ button{background:#0759a5}
 
 <section id="repSetupPanel" class="card rep-setup" hidden>
   <div class="setup-head">
-    <div><h2>Rep Setup / Link Builder</h2><p>Create a personalized link for any inside salesperson without editing the HTML.</p></div>
+    <div><h2>Team Master Control</h2><p>Manage sales reps, question settings, custom questions, and create shareable links. This version works without a backend by saving the manager's setup in this browser.</p></div>
     <span class="setup-badge">TEAM ADMIN</span>
   </div>
-  <div class="setup-grid">
-    <label>Rep ID<input id="setupRepId" placeholder="anthony"></label>
-    <label>Salesperson Name<input id="setupName" placeholder="John Smith"></label>
-    <label>Title<input id="setupTitle" placeholder="Inside Sales Associate"></label>
-    <label>Company / Branch<input id="setupCompany" placeholder="Johnstone Supply - JTeam Group"></label>
-    <label>Address<input id="setupAddress" placeholder="Branch address"></label>
-    <label>Office Phone<input id="setupOffice" placeholder="Office"></label>
-    <label>Cell Phone<input id="setupCell" placeholder="Cell"></label>
-    <label>Email<input id="setupEmail" type="email" placeholder="rep@johnstonesupply.com"></label>
-    <label class="wide">Photo URL <span class="muted">(optional — use a web-accessible photo URL)</span><input id="setupPhoto" type="url" placeholder="https://.../rep-photo.jpg"></label>
-    <label class="wide">Generated Rep Link<input id="generatedRepLink" readonly placeholder="Press Generate Rep Link"></label>
+
+  <div class="admin-tabs">
+    <button type="button" class="admin-tab active" data-admin-tab="reps">Sales Reps</button>
+    <button type="button" class="admin-tab" data-admin-tab="questions">Questions</button>
+    <button type="button" class="admin-tab" data-admin-tab="tools">Backup / Share</button>
   </div>
-  <div class="actions">
-    <button type="button" class="primary" onclick="generateRepLink()">Generate Rep Link</button>
-    <button type="button" onclick="copyRepLink()">Copy Link</button>
+
+  <div class="admin-pane" data-admin-pane="reps">
+    <div class="admin-toolbar">
+      <div><h3>Salesperson Directory</h3><p class="muted">Each rep gets a permanent-style <b>rep ID</b>. Editing a rep here does not change old links; generate/copy the updated link when details change.</p></div>
+      <button type="button" class="primary" id="adminNewRepBtn">+ Add Salesperson</button>
+    </div>
+    <div id="repEditorCard" class="admin-editor" hidden>
+      <div class="setup-grid">
+        <label>Rep ID<input id="adminRepId" placeholder="john-smith"></label>
+        <label>Salesperson Name<input id="adminRepName" placeholder="John Smith"></label>
+        <label>Title<input id="adminRepTitle" placeholder="Inside Sales Associate"></label>
+        <label>Company / Branch<input id="adminRepCompany" placeholder="Johnstone Supply - JTeam Group"></label>
+        <label>Address<input id="adminRepAddress" placeholder="Branch address"></label>
+        <label>Office Phone<input id="adminRepOffice" placeholder="Office"></label>
+        <label>Cell Phone<input id="adminRepCell" placeholder="Cell"></label>
+        <label>Email<input id="adminRepEmail" type="email" placeholder="rep@johnstonesupply.com"></label>
+        <label class="wide">Photo URL <span class="muted">(web-accessible image URL)</span><input id="adminRepPhoto" type="url" placeholder="https://.../rep-photo.jpg"></label>
+      </div>
+      <div class="actions">
+        <button type="button" class="primary" id="adminSaveRepBtn">Save Salesperson</button>
+        <button type="button" id="adminCancelRepBtn">Cancel</button>
+      </div>
+    </div>
+    <div id="repDirectory" class="rep-directory"></div>
+    <div id="adminRepMessage" class="setup-message"></div>
   </div>
-  <div id="setupMessage" class="setup-message"></div>
+
+  <div class="admin-pane" data-admin-pane="questions" hidden>
+    <div class="admin-toolbar">
+      <div><h3>Question Manager</h3><p class="muted">Edit wording, turn questions on/off, and add custom questions. Changes are embedded into newly generated rep links.</p></div>
+      <button type="button" class="primary" id="adminAddQuestionBtn">+ Add Custom Question</button>
+    </div>
+    <div id="questionDirectory" class="question-directory"></div>
+    <div id="adminQuestionMessage" class="setup-message"></div>
+  </div>
+
+  <div class="admin-pane" data-admin-pane="tools" hidden>
+    <div class="admin-toolbar">
+      <div><h3>Backup / Share Manager Setup</h3><p class="muted">No backend means this browser stores your master data locally. Export a backup or create a shareable manager link containing the current setup.</p></div>
+    </div>
+    <div class="tools-grid">
+      <button type="button" id="adminExportBtn">Export Master JSON</button>
+      <button type="button" id="adminImportBtn">Import Master JSON</button>
+      <input id="adminImportFile" type="file" accept="application/json" hidden>
+      <button type="button" class="primary" id="adminShareMasterBtn">Create Shareable Master Link</button>
+      <input id="adminMasterLink" class="wide" readonly placeholder="Shareable master link will appear here">
+      <button type="button" id="adminResetDefaultsBtn">Reset Local Master to Defaults</button>
+    </div>
+    <div id="adminToolsMessage" class="setup-message"></div>
+    <div class="admin-warning"><b>Important:</b> this is intentionally a no-backend system. Local changes live in this browser unless you export them or create/share a master-link snapshot. Existing rep links contain their own copy of the rep info and question settings, so they must be regenerated when you make changes that should affect that link.</div>
+  </div>
 </section>
 <section class="profile-intro">
   <div class="intro-copy"><div class="team-rep-note" id="teamRepNote">Your Johnstone Supply sales representative will receive your completed profile.</div>
@@ -159,7 +202,7 @@ button{background:#0759a5}
 </div>
 <button type="submit">Submit &amp; Send My Contractor Profile</button><p class="small">Your information is used to better support your company and plan future conversations.</p></form>
 <section id="success" class="card success"><h2>Thanks! Your profile is ready to send.</h2>
-<p>Your completed Contractor Profile has been prepared in your email app and addressed to <b id="successRep"></b>.</p>
+<p>Your completed Contractor Profile has been prepared for <b id="successRep"></b>. Your email app will be opened with the full written report. On supported phones/tablets, the browser may also offer a share option for the completed profile.</p>
 <p><b>One last step: please press Send in your email app to finish.</b></p>
 <p>Thank you for taking the time to complete this. I’ll use the information to save you time, help you get what you need faster, and better support your company’s goals.</p></section>
 </main>
@@ -187,7 +230,7 @@ const b64ToJson=s=>{
 };
 const encodedProfile=params.get("profile");
 const linkedRep=encodedProfile?b64ToJson(encodedProfile):null;
-const ACTIVE_REP=(linkedRep&&linkedRep.name&&linkedRep.email)?{...TEAM_DEFAULT_REP,...linkedRep}:TEAM_DEFAULT_REP;
+const ACTIVE_REP=(linkedRep&&linkedRep.name&&linkedRep.email)?{...TEAM_DEFAULT_REP,...linkedRep} : TEAM_DEFAULT_REP; if(window.ACTIVE_REP_OVERRIDE) Object.assign(ACTIVE_REP,window.ACTIVE_REP_OVERRIDE);
 
 function applyRepProfile(){
   const set=(id,value)=>{const el=document.getElementById(id);if(el)el.textContent=value||""};
@@ -266,6 +309,231 @@ async function copyRepLink(){
 }
 </script>
 
+<script id="masterAdminEngine">
+(function(){
+  const params=new URLSearchParams(window.location.search);
+  const ADMIN_KEY="contractorProfileMasterV3";
+  const DEFAULT_REP={
+    id:"anthony",name:"Anthony Crumity",title:"Inside Sales Associate",company:"Johnstone Supply - JTeam Group",
+    address:"3650 Junction Blvd, Garner, NC 27606",office:"(919) 661-5565 ext: 8569",cell:"(919) 418-2183",
+    email:"anthony.crumity@jteamgroup.com",photo:document.getElementById("repPhoto")?.getAttribute("src")||""
+  };
+
+  const cleanText=v=>String(v??"").replace(/\s+/g," ").trim();
+  const idSafe=v=>cleanText(v).toLowerCase().replace(/[^a-z0-9_-]/g,"");
+  const b64Encode=obj=>{
+    const bytes=new TextEncoder().encode(JSON.stringify(obj)); let bin="";
+    bytes.forEach(b=>bin+=String.fromCharCode(b));
+    return btoa(bin).replace(/\+/g,"-").replace(/\//g,"_").replace(/=+$/g,"");
+  };
+  const b64Decode=str=>{
+    try{const pad="=".repeat((4-(str.length%4))%4); const bin=atob((str+pad).replace(/-/g,"+").replace(/_/g,"/")); const bytes=Uint8Array.from(bin,c=>c.charCodeAt(0)); return JSON.parse(new TextDecoder().decode(bytes));}
+    catch(e){return null;}
+  };
+
+  function discoverQuestions(){
+    const out=[]; const form=document.getElementById("form"); if(!form)return out;
+    let i=0;
+    [...form.children].forEach(el=>{
+      if(el.matches("label") && !el.classList.contains("choice")){
+        const input=el.querySelector("input,textarea,select"); if(!input||!input.name)return;
+        const qid=input.name;
+        el.dataset.qid=qid;
+        const raw=[...el.childNodes].find(n=>n.nodeType===3&&cleanText(n.textContent));
+        out.push({id:qid,type:"field",defaultLabel:cleanText(raw?.textContent||qid).replace(/\s*\*\s*$/,""),label:cleanText(raw?.textContent||qid).replace(/\s*\*\s*$/,""),required:!!input.required,active:true,custom:false,order:i++});
+      } else if(el.matches("fieldset")){
+        const legend=el.querySelector("legend"); const input=el.querySelector("input,textarea,select"); if(!legend||!input||!input.name)return;
+        const qid=input.name;
+        el.dataset.qid=qid;
+        const base=cleanText(legend.textContent).replace(/\s*\*\s*$/,"",);
+        out.push({id:qid,type:"group",defaultLabel:base,label:base,required:[...el.querySelectorAll("input")].some(x=>x.required),active:true,custom:false,order:i++});
+      }
+    });
+    return out;
+  }
+
+  const DISCOVERED=discoverQuestions();
+  const DEFAULT_QUESTIONS=DISCOVERED.map(q=>({...q}));
+
+  function getStateFromStorage(){
+    try{const raw=localStorage.getItem(ADMIN_KEY); return raw?JSON.parse(raw):null;}catch(e){return null;}
+  }
+  function saveState(state){
+    localStorage.setItem(ADMIN_KEY,JSON.stringify(state));
+    window.__MASTER_STATE=state;
+  }
+
+  function defaultState(){
+    return {version:3, reps:[DEFAULT_REP], questions:DEFAULT_QUESTIONS, customQuestions:[]};
+  }
+
+  function normalizeState(s){
+    const base=defaultState();
+    const reps=Array.isArray(s?.reps)?s.reps.filter(r=>r&&r.id&&r.name&&r.email).map(r=>({...DEFAULT_REP,...r,id:idSafe(r.id)})):base.reps;
+    const qMap=new Map((Array.isArray(s?.questions)?s.questions:base.questions).map(q=>[q.id,q]));
+    const questions=base.questions.map(q=>({...q,...(qMap.get(q.id)||{})}));
+    const customs=Array.isArray(s?.customQuestions)?s.customQuestions.filter(q=>q&&q.id&&q.label).map(q=>({...q,custom:true,type:"custom"})):[];
+    return {version:3,reps,questions,customQuestions:customs};
+  }
+
+  const masterFromHash=b64Decode((window.location.hash||"").replace(/^#config=/,""));
+  const masterFromQuery=b64Decode(params.get("master")||"");
+  let state=normalizeState(masterFromHash||masterFromQuery||getStateFromStorage()||defaultState());
+  saveState(state);
+  window.__MASTER_STATE=state;
+
+  function currentConfig(){return {questions:state.questions,customQuestions:state.customQuestions};}
+  function makeLink(rep){
+    const payload={profile:rep,config:currentConfig()};
+    const u=new URL(window.location.href); u.search=""; u.hash="";
+    u.searchParams.set("rep",rep.id); u.searchParams.set("profile",b64Encode(rep)); u.searchParams.set("cfg",b64Encode(currentConfig()));
+    return u.toString();
+  }
+  function readLinkedConfig(){return b64Decode(params.get("cfg")||"");}
+  const linkedCfg=readLinkedConfig();
+  function applyQuestionConfig(cfg){
+    const qcfg=cfg&&Array.isArray(cfg.questions)?cfg.questions:state.questions;
+    qcfg.forEach(q=>{
+      const el=document.querySelector('[data-qid="'+CSS.escape(q.id)+'"]');
+      if(!el)return;
+      el.hidden=(q.active===false);
+      if(el.matches("fieldset")){ const lg=el.querySelector("legend"); if(lg)lg.textContent=q.label+(q.required?" *":""); }
+      else{
+        const raw=[...el.childNodes].find(n=>n.nodeType===3&&cleanText(n.textContent));
+        if(raw)raw.textContent=q.label+(q.required?" *":"");
+      }
+    });
+    (cfg&&Array.isArray(cfg.customQuestions)?cfg.customQuestions:state.customQuestions).forEach(q=>{
+      let el=document.getElementById("customq-"+q.id);
+      if(!el){
+        const btn=document.querySelector('#form button[type="submit"]');
+        if(!btn)return;
+        el=document.createElement("label"); el.id="customq-"+q.id; el.dataset.customQuestion=q.id;
+        el.innerHTML=escapeHtml(q.label)+(q.required?" *":"")+'<input name="'+escapeAttr(q.id)+'" type="text" '+(q.required?'required':'')+' placeholder="Your answer">';
+        btn.parentNode.insertBefore(el,btn);
+      }
+      el.hidden=(q.active===false);
+      const txt=[...el.childNodes].find(n=>n.nodeType===3&&cleanText(n.textContent)); if(txt)txt.textContent=q.label+(q.required?" *":"");
+      const inp=el.querySelector("input"); if(inp)inp.required=!!q.required;
+    });
+  }
+  function escapeHtml(s){return String(s).replace(/[&<>\"]/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[m]));}
+  function escapeAttr(s){return String(s).replace(/[^a-zA-Z0-9_-]/g,"_");}
+  applyQuestionConfig(linkedCfg||currentConfig());
+
+  // New per-rep loader: preserve old ?profile links for compatibility.
+  const activeProfile=b64Decode(params.get("profile")||"");
+  if(activeProfile&&activeProfile.name&&activeProfile.email){
+    window.ACTIVE_REP_OVERRIDE=activeProfile;
+  }
+
+  const adminPanel=document.getElementById("repSetupPanel");
+  if(!adminPanel)return;
+  const isAdmin=params.get("admin")==="1"||params.get("setup")==="1";
+  if(!isAdmin){ adminPanel.remove(); return; }
+  adminPanel.hidden=false;
+
+  const panes=[...document.querySelectorAll("[data-admin-pane]")];
+  document.querySelectorAll("[data-admin-tab]").forEach(btn=>btn.addEventListener("click",()=>{
+    document.querySelectorAll("[data-admin-tab]").forEach(x=>x.classList.toggle("active",x===btn));
+    panes.forEach(p=>p.hidden=p.dataset.adminPane!==btn.dataset.adminTab);
+  }));
+
+  const val=id=>document.getElementById(id)?.value?.trim()||"";
+  const setv=(id,v)=>{const e=document.getElementById(id);if(e)e.value=v||""};
+  let editingRepId=null;
+
+  function repDirectory(){
+    const box=document.getElementById("repDirectory"); if(!box)return;
+    box.innerHTML="";
+    state.reps.forEach(rep=>{
+      const row=document.createElement("div"); row.className="rep-row";
+      row.innerHTML='<div class="rep-main"><b>'+escapeHtml(rep.name)+'</b><span>'+escapeHtml(rep.title||"")+'</span><small>'+escapeHtml(rep.email)+'</small></div>'+
+        '<div class="rep-actions"><button type="button" data-action="edit" data-id="'+escapeAttr(rep.id)+'">Edit</button><button type="button" data-action="copy" data-id="'+escapeAttr(rep.id)+'">Copy Link</button><button type="button" data-action="open" data-id="'+escapeAttr(rep.id)+'">Open</button><button type="button" class="danger" data-action="delete" data-id="'+escapeAttr(rep.id)+'">Delete</button></div>';
+      box.appendChild(row);
+    });
+    if(!state.reps.length)box.innerHTML='<div class="muted">No salespeople yet.</div>';
+  }
+  function showRepEditor(rep){
+    document.getElementById("repEditorCard").hidden=false;
+    setv("adminRepId",rep?.id||""); setv("adminRepName",rep?.name||""); setv("adminRepTitle",rep?.title||""); setv("adminRepCompany",rep?.company||""); setv("adminRepAddress",rep?.address||""); setv("adminRepOffice",rep?.office||""); setv("adminRepCell",rep?.cell||""); setv("adminRepEmail",rep?.email||""); setv("adminRepPhoto",rep?.photo||"");
+    editingRepId=rep?.id||null;
+  }
+  function hideRepEditor(){document.getElementById("repEditorCard").hidden=true;editingRepId=null;}
+  document.getElementById("adminNewRepBtn").addEventListener("click",()=>showRepEditor(null));
+  document.getElementById("adminCancelRepBtn").addEventListener("click",hideRepEditor);
+  document.getElementById("adminSaveRepBtn").addEventListener("click",()=>{
+    const rep={id:idSafe(val("adminRepId")),name:val("adminRepName"),title:val("adminRepTitle"),company:val("adminRepCompany"),address:val("adminRepAddress"),office:val("adminRepOffice"),cell:val("adminRepCell"),email:val("adminRepEmail"),photo:val("adminRepPhoto")};
+    const msg=document.getElementById("adminRepMessage");
+    if(!rep.id||!rep.name||!rep.email){msg.textContent="Rep ID, name, and email are required.";return;}
+    const dup=state.reps.some(r=>r.id===rep.id&&r.id!==editingRepId); if(dup){msg.textContent="That Rep ID already exists. Use a unique ID.";return;}
+    if(editingRepId){state.reps=state.reps.map(r=>r.id===editingRepId?rep:r);}else state.reps.push(rep);
+    saveState(state); repDirectory(); hideRepEditor(); msg.textContent="Salesperson saved. Generate/copy the updated link for this rep.";
+  });
+  document.getElementById("repDirectory").addEventListener("click",async e=>{
+    const b=e.target.closest("button[data-action]"); if(!b)return; const rep=state.reps.find(r=>r.id===b.dataset.id); if(!rep)return;
+    const action=b.dataset.action;
+    if(action==="edit")showRepEditor(rep);
+    if(action==="delete"){
+      if(!confirm("Delete "+rep.name+" from the manager directory? Existing links will still work, but this rep will no longer appear here."))return;
+      state.reps=state.reps.filter(r=>r.id!==rep.id); saveState(state); repDirectory();
+    }
+    if(action==="open")window.open(makeLink(rep),"_blank");
+    if(action==="copy"){
+      try{await navigator.clipboard.writeText(makeLink(rep));document.getElementById("adminRepMessage").textContent="Link copied for "+rep.name+".";}
+      catch(err){prompt("Copy this rep link:",makeLink(rep));}
+    }
+  });
+
+  function questionDirectory(){
+    const box=document.getElementById("questionDirectory"); if(!box)return; box.innerHTML="";
+    const all=[...state.questions,...state.customQuestions.map(q=>({...q,type:"custom",custom:true}))];
+    all.forEach((q,idx)=>{
+      const row=document.createElement("div"); row.className="question-row";
+      row.innerHTML='<div class="question-toggle"><input type="checkbox" '+(q.active!==false?'checked':'')+' data-q-toggle="'+escapeAttr(q.id)+'"></div>'+
+        '<div class="question-edit"><input type="text" value="'+escapeAttr(q.label)+'" data-q-label="'+escapeAttr(q.id)+'"><small>'+escapeHtml(q.custom?'Custom question':'Built-in question')+' · '+escapeHtml(q.required?'Required':'Optional')+'</small></div>'+
+        '<div class="question-actions">'+(q.custom?'<button type="button" class="danger" data-q-delete="'+escapeAttr(q.id)+'">Delete</button>':'<button type="button" data-q-reset="'+escapeAttr(q.id)+'">Reset</button>')+'</div>';
+      box.appendChild(row);
+    });
+  }
+  document.getElementById("adminAddQuestionBtn").addEventListener("click",()=>{
+    const n=state.customQuestions.length+1; const id="custom_"+Date.now();
+    state.customQuestions.push({id,label:"New question",required:false,active:true,custom:true,type:"custom"}); saveState(state); questionDirectory();
+    document.getElementById("adminQuestionMessage").textContent="Custom question added. Edit its wording above, then share/regenerate rep links.";
+    applyQuestionConfig({questions:state.questions,customQuestions:state.customQuestions});
+  });
+  document.getElementById("questionDirectory").addEventListener("input",e=>{
+    const id=e.target.dataset.qLabel; if(!id)return; const q=state.questions.find(x=>x.id===id)||state.customQuestions.find(x=>x.id===id); if(!q)return; q.label=e.target.value; saveState(state); applyQuestionConfig({questions:state.questions,customQuestions:state.customQuestions});
+  });
+  document.getElementById("questionDirectory").addEventListener("change",e=>{
+    const id=e.target.dataset.qToggle; if(!id)return; const q=state.questions.find(x=>x.id===id)||state.customQuestions.find(x=>x.id===id); if(!q)return; q.active=e.target.checked; saveState(state); applyQuestionConfig({questions:state.questions,customQuestions:state.customQuestions});
+  });
+  document.getElementById("questionDirectory").addEventListener("click",e=>{
+    const reset=e.target.closest("button[data-q-reset]"); const del=e.target.closest("button[data-q-delete]");
+    if(reset){const q=state.questions.find(x=>x.id===reset.dataset.qReset); if(q){Object.assign(q,DEFAULT_QUESTIONS.find(x=>x.id===q.id)||{}); q.active=true;} saveState(state); questionDirectory(); applyQuestionConfig(currentConfig());}
+    if(del){state.customQuestions=state.customQuestions.filter(x=>x.id!==del.dataset.qDelete); saveState(state); questionDirectory(); applyQuestionConfig(currentConfig());}
+  });
+
+  function downloadText(name,text,type){const blob=new Blob([text],{type}); const a=document.createElement("a"); a.href=URL.createObjectURL(blob); a.download=name; document.body.appendChild(a); a.click(); a.remove(); setTimeout(()=>URL.revokeObjectURL(a.href),1000);}
+  document.getElementById("adminExportBtn").addEventListener("click",()=>downloadText("contractor-profile-master-backup.json",JSON.stringify(state,null,2),"application/json"));
+  document.getElementById("adminImportBtn").addEventListener("click",()=>document.getElementById("adminImportFile").click());
+  document.getElementById("adminImportFile").addEventListener("change",e=>{
+    const file=e.target.files?.[0]; if(!file)return; const reader=new FileReader(); reader.onload=()=>{try{state=normalizeState(JSON.parse(reader.result));saveState(state);repDirectory();questionDirectory();applyQuestionConfig(currentConfig());document.getElementById("adminToolsMessage").textContent="Master setup imported.";}catch(err){document.getElementById("adminToolsMessage").textContent="That file could not be imported.";}}; reader.readAsText(file); e.target.value="";
+  });
+  document.getElementById("adminShareMasterBtn").addEventListener("click",()=>{
+    const u=new URL(window.location.href); u.search=""; u.searchParams.set("admin","1"); u.hash="config="+b64Encode(state); const out=document.getElementById("adminMasterLink"); out.value=u.toString(); document.getElementById("adminToolsMessage").textContent="Master link created. Anyone with this link can view/copy the embedded setup, so keep it internal.";
+  });
+  document.getElementById("adminResetDefaultsBtn").addEventListener("click",()=>{
+    if(!confirm("Reset this browser's master setup to the default Anthony profile and original questions?"))return;
+    state=defaultState(); saveState(state); repDirectory();questionDirectory();applyQuestionConfig(currentConfig()); document.getElementById("adminToolsMessage").textContent="Local master reset.";
+  });
+
+  repDirectory(); questionDirectory();
+  const originalGenerate=window.generateRepLink;
+  window.generateRepLink=function(){ return null; };
+})();
+</script>
+
 <script>
 const form=document.getElementById("form");
 document.querySelectorAll(".top3 input").forEach(cb=>cb.addEventListener("change",()=>{
@@ -298,6 +566,7 @@ form.addEventListener("submit",e=>{
  e.preventDefault();
  const d={submittedAt:new Date().toISOString()};
  new FormData(form).forEach((v,k)=>{if(d[k]){d[k]=Array.isArray(d[k])?d[k].concat(v):[d[k],v]}else d[k]=v});
+ const successRep=document.getElementById("successRep"); if(successRep)successRep.textContent=ACTIVE_REP.name;
  const subject="Contractor Profile — "+(d.company||"New Submission")+" — "+ACTIVE_REP.name;
  const body=[
  "CONTRACTOR PROFILE",
