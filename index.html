@@ -265,7 +265,11 @@ if(params.get("setup")==="1" && setupPanel){
   u("setupPhoto").value=(linkedRep&&linkedRep.photo&&linkedRep.photo.startsWith("http"))?linkedRep.photo:"";
 }
 function makeRepLink(profile){
-  const json=JSON.stringify(profile);
+  // Never put an embedded data:image payload into a shareable URL.
+  // Those images can make the URL megabytes long and browsers may fail to open it.
+  const safeProfile={...profile};
+  if(typeof safeProfile.photo==="string" && /^data:/i.test(safeProfile.photo)) safeProfile.photo="";
+  const json=JSON.stringify(safeProfile);
   const bytes=new TextEncoder().encode(json);
   let binary="";bytes.forEach(b=>binary+=String.fromCharCode(b));
   const encoded=btoa(binary).replace(/\+/g,"-").replace(/\//g,"_").replace(/=+$/,"");
@@ -384,9 +388,13 @@ async function copyRepLink(){
 
   function currentConfig(){return {questions:state.questions,customQuestions:state.customQuestions};}
   function makeLink(rep){
-    const payload={profile:rep,config:currentConfig()};
+    // Keep the shareable link browser-safe. Embedded base64 image data should never go into a URL.
+    const safeRep={...rep};
+    if(typeof safeRep.photo==="string" && /^data:/i.test(safeRep.photo)) safeRep.photo="";
     const u=new URL(window.location.href); u.search=""; u.hash="";
-    u.searchParams.set("rep",rep.id); u.searchParams.set("profile",b64Encode(rep)); u.searchParams.set("cfg",b64Encode(currentConfig()));
+    u.searchParams.set("rep",safeRep.id);
+    u.searchParams.set("profile",b64Encode(safeRep));
+    u.searchParams.set("cfg",b64Encode(currentConfig()));
     return u.toString();
   }
   function readLinkedConfig(){return b64Decode(params.get("cfg")||"");}
@@ -445,6 +453,8 @@ async function copyRepLink(){
   // New per-rep loader: preserve old ?profile links for compatibility.
   const activeProfile=b64Decode(params.get("profile")||"");
   if(activeProfile&&activeProfile.name&&activeProfile.email){
+    // If the shareable link omitted a data URI photo, keep the page's built-in/default photo.
+    if(!activeProfile.photo) delete activeProfile.photo;
     window.ACTIVE_REP_OVERRIDE=activeProfile;
   }
 
